@@ -28,3 +28,6 @@ Run `scripts/get_status.sh` until the "healthy" attribute of the JSON response i
 
 ### Fund the Network
 Run `scripts/fund_network.sh`. Follow the steps in the relevant section of the [Avalanche docs](https://docs.avax.network/quickstart/fund-a-local-test-network) to complete the integration with MetaMask.
+
+## Attaching the ethclient
+Compile and run the go module in `ethclient`. Attaches to the node at localhost:9650 and subscribes to new accepted transactions and gets the time first seen.
