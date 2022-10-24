@@ -42,6 +42,6 @@ func main() {
 	      } else {
 		fmt.Println(vLog, " => ", tx.FirstSeen())
 	      }
-      	    }
+      	}
 	}
 }
