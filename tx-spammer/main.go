@@ -95,6 +95,7 @@ func runFunc(cmd *cobra.Command, args []string) {
 			eps[i] = ci.URIs[i] + ci.Endpoint + "/rpc"
 		}
 		cfg.Endpoints = eps
+		fmt.Println(cfg.Endpoints)
 	}
 
 	ctx, cancel := context.WithTimeout(context.Background(), timeout)
