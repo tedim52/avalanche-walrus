@@ -1,14 +1,14 @@
 module testbed
 
-go 1.19
+go 1.18
 
 require (
-	github.com/ava-labs/coreth v0.11.0
+	github.com/ava-labs/coreth v0.11.1
 	github.com/ethereum/go-ethereum v1.10.25
 )
 
 require (
-	github.com/ava-labs/avalanchego v1.8.5 // indirect
+	github.com/ava-labs/avalanchego v1.9.1-0.20221020192610-3761bc705fbf // indirect
 	github.com/btcsuite/btcd/btcec/v2 v2.2.0 // indirect
 	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/deckarep/golang-set v1.8.0 // indirect
@@ -28,7 +28,7 @@ require (
 	github.com/tklauser/numcpus v0.2.2 // indirect
 	github.com/yusufpapurcu/wmi v1.2.2 // indirect
 	golang.org/x/crypto v0.0.0-20220622213112-05595931fe9d // indirect
-	golang.org/x/sys v0.0.0-20220722155257-8c9f86f7a55f // indirect
+	golang.org/x/sys v0.0.0-20220919091848-fb04ddd9f9c8 // indirect
 	golang.org/x/time v0.0.0-20210723032227-1f47c861a9ac // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 )
