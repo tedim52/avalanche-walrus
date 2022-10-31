@@ -28,7 +28,8 @@ In a separate terminal run the testbed module passing the filename as the first 
 This will 
 1. Start a cluster with the given configuration
 1. Fund the network
-1. Attach ethclients to each node which will output to the terminal.
+1. Attach `txn-subscripbers` to each node which will output to the terminal information about transactions
+1. See this REAMDE in `tx-spammer/` to see how to spam transactions to this network
 
 ### Resetting MetaMask Account
 For first time setup, follow the steps in the relevant section of the [Avalanche docs](https://docs.avax.network/quickstart/fund-a-local-test-network) to complete the integration with MetaMask.<br>

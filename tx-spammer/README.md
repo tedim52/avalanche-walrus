@@ -1,8 +1,9 @@
 ## tx-spammer
 
-This code spams transactions to the local network of avalanche node created by the `testbed` module. To start spamming transactions, run the following commands in the `tx-spammer` directory after starting a local avalanche network and running the `testbed` binary (see readme [here](https://github.com/tedim52/avalanche-walrus#readme):
+This code spams transactions to the local network of avalanche node created by the `testbed` module. To start spamming transactions, run the following commands after starting a local avalanche network and running the `testbed` binary (see readme [here](https://github.com/tedim52/avalanche-walrus#readme)):
 
 ```
+cd tx-spammer/
 go build
 ./tx-spammer --cluster-info-yaml=.simulator/config.yml
 ```
