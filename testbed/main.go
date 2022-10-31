@@ -132,10 +132,10 @@ func fundNetwork() {
 	post(url, payload)
 	
 	// Import Key
-	url = "http://127.0.0.1:9650/ext/bc/X"
+	url = "http://127.0.0.1:9650/ext/bc/C/avax"
 	payload = fmt.Sprintf(`{
 		"jsonrpc":"2.0",
-		"id"     :1,
+		"id"     : 1,
 		"method" :"avm.importKey",
 		"params" :{
 			"username": "username",
@@ -146,14 +146,14 @@ func fundNetwork() {
 	post(url, payload)
 	
 	// Check Balance
-	url = "http://127.0.0.1:9650/ext/bc/X"
+	url = "http://127.0.0.1:9650/ext/bc/C/rpc"
 	payload = `{
 		"jsonrpc":"2.0",
 		"id"     : 1,
-		"method" :"avm.getBalance",
+		"method" :"eth_getBalance",
 		"params" :{
-			"address":"X-custom18jma8ppw3nhx5r4ap8clazz0dps7rv5u9xde7p",
-			"assetID": "AVAX"
+			"0x8db97C7cEcE249c2b98bDC0226Cc4C2A57BF52FC",
+			"latest"
 		}
 	}`
 	post(url, payload)
