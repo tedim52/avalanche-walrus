@@ -10,7 +10,7 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/tedim52/avalanche-walrus/tx-spammer/worker"
+	"tx-spammer/worker"
 	"github.com/spf13/cobra"
 	"sigs.k8s.io/yaml"
 )
