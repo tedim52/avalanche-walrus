@@ -1,4 +1,4 @@
-module testbed
+module github.com/tedim52/avalanche-walrus/testbed
 
 go 1.18
 

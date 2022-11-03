@@ -8,8 +8,8 @@ import (
 	"math/rand"
 	"time"
 
-	"tx-spammer/key"
-	"tx-spammer/metrics"
+	"github.com/tedim52/avalanche-walrus/tx-spammer/key"
+	"github.com/tedim52/avalanche-walrus/tx-spammer/metrics"
 	"github.com/ava-labs/coreth/core/types"
 	"github.com/ava-labs/coreth/ethclient"
 	"github.com/ava-labs/coreth/params"

@@ -1,4 +1,4 @@
-module tx-spammer
+module github.com/tedim52/avalanche-walrus/tx-spammer
 
 go 1.18
 
