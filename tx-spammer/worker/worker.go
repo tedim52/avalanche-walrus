@@ -183,9 +183,6 @@ func (w *worker) waitForBalance(ctx context.Context, stdout bool, minBalance *bi
 
 func (w *worker) sendTx(ctx context.Context, recipient common.Address, value *big.Int) error {
 	for ctx.Err() == nil {
-				fmt.Println(transferGasLimit)
-		fmt.Println(feeCap)
-		fmt.Println(priorityFee)
 		tx := types.NewTx(&types.DynamicFeeTx{
 			ChainID:   chainID,
 			Nonce:     w.nonce,
