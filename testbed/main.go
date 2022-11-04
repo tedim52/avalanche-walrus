@@ -167,7 +167,7 @@ func fundNetwork() {
 	post(url, payload)
 }
 
-func start_tx_spamming(){
+func startTxSpamming(){
 	// probably want to make these parameritizable at some point
 	rpcEndpoints := make([]string, 5)
 	rpcEndpoints = append(rpcEndpoints, "http://127.0.0.1:9650","http://127.0.0.1:9652","http://127.0.0.1:9654","http://127.0.0.1:9658","http://127.0.0.1:9656")
@@ -250,6 +250,6 @@ func main() {
         go pollNode(addr)
     }
 
-	start_tx_spamming()
+	startTxSpamming()
 	for {}
 }

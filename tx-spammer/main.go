@@ -47,12 +47,12 @@ func newCommand() *cobra.Command {
 		Run:        runFunc,
 	}
 
-	cmd.PersistentFlags().DurationVarP(&timeout, "timeout", "t", time.Minute, "Duration to run simulator")
+	cmd.PersistentFlags().DurationVarP(&timeout, "timeout", "t", 5 * time.Minute, "Duration to run simulator")
 	cmd.PersistentFlags().StringVarP(&keysDir, "keys", "k", ".simulator/keys", "Directory for key files")
 	cmd.PersistentFlags().StringVarP(&clusterInfoYamlPath, "cluster-info-yaml", "o", ".simulator/config.yml", "If non-empty, it loads the endpoints from the YAML and overwrites --config")
 	cmd.PersistentFlags().StringSliceVarP(&rpcEndpoints, "endpoints", "e", nil, "If non-empty, it loads the endpoints from the YAML and overwrites --config")
 	cmd.PersistentFlags().IntVarP(&concurrency, "concurrency", "c", 10, "Concurrency")
-	cmd.PersistentFlags().Uint64VarP(&baseFee, "base-fee", "f", 25, "Base fee")
+	cmd.PersistentFlags().Uint64VarP(&baseFee, "base-fee", "f", 225, "Base fee")
 	cmd.PersistentFlags().Uint64VarP(&priorityFee, "priority-fee", "p", 1, "Base fee")
 
 	return cmd
