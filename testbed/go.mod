@@ -5,6 +5,8 @@ go 1.18
 require (
 	github.com/ava-labs/coreth v0.11.1
 	github.com/ethereum/go-ethereum v1.10.25
+	golang.org/x/sync v0.0.0-20210220032951-036812b2e83c
+	sigs.k8s.io/yaml v1.3.0
 )
 
 require (
@@ -30,5 +32,6 @@ require (
 	golang.org/x/crypto v0.0.0-20220622213112-05595931fe9d // indirect
 	golang.org/x/sys v0.0.0-20220919091848-fb04ddd9f9c8 // indirect
 	golang.org/x/time v0.0.0-20210723032227-1f47c861a9ac // indirect
+	gopkg.in/yaml.v2 v2.4.0 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 )

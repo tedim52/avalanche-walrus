@@ -10,12 +10,20 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"os/signal"
 	"strconv"
 	"strings"
 	"time"
+	"errors"
+	"syscall"
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ava-labs/coreth/ethclient"
+	"github.com/tedim52/avalanche-walrus/testbed/tx-spammer/worker"
+)
+
+var (
+	txSpammingTimeout = 5 * time.Minute
 )
 
 func post(url string, payload string) string {
@@ -159,6 +167,42 @@ func fundNetwork() {
 	post(url, payload)
 }
 
+func startTxSpamming(){
+	// probably want to make these parameritizable at some point
+	rpcEndpoints := make([]string, 5)
+	rpcEndpoints = append(rpcEndpoints, "http://127.0.0.1:9650","http://127.0.0.1:9652","http://127.0.0.1:9654","http://127.0.0.1:9658","http://127.0.0.1:9656")
+	concurrency := 8
+	baseFee := uint64(225)
+	priorityFee := uint64(1)
+	keysDir := ".simulator/keys"
+
+	cfg := &worker.Config{
+		Endpoints:   rpcEndpoints,
+		Concurrency: concurrency,
+		BaseFee:     baseFee,
+		PriorityFee: priorityFee,
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), txSpammingTimeout)
+	errc := make(chan error)
+	go func() {
+		errc <- worker.Run(ctx, cfg, keysDir)
+	}()
+
+	sigs := make(chan os.Signal, 1)
+	signal.Notify(sigs, syscall.SIGTERM, syscall.SIGINT)
+	select {
+	case sig := <-sigs:
+		log.Printf("received OS signal %v; canceling context", sig.String())
+		cancel()
+	case err := <-errc:
+		cancel()
+		if !errors.Is(err, context.DeadlineExceeded) {
+			log.Fatalf("worker.Run returned an error %v", err)
+		}
+	}
+}
+
 func main() {
 	filename := os.Args[1]
 	file, err := os.Open(filename)
@@ -206,5 +250,6 @@ func main() {
         go pollNode(addr)
     }
 
+	startTxSpamming()
 	for {}
 }

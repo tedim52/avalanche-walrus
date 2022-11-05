@@ -5,7 +5,7 @@ This code spams transactions to the local network of avalanche node created by t
 ```
 cd tx-spammer/
 go build
-./tx-spammer --cluster-info-yaml=.simulator/config.yml
+./tx-spammer
 ```
 
 The output should look like the following:
