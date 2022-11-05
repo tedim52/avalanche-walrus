@@ -18,6 +18,7 @@ import (
 	"syscall"
 
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/ava-labs/coreth/core/types"
 	"github.com/ava-labs/coreth/ethclient"
 	"github.com/tedim52/avalanche-walrus/testbed/tx-spammer/worker"
 )
@@ -89,7 +90,7 @@ func pollNode(addr string) {
 	      if err != nil {
 		fmt.Println("tx lookup failed", err)
 	      } else {
-		fmt.Println(vLog, " => ", tx.FirstSeen())
+		fmt.Println(*vLog, tx.Hash, " => ", tx.FirstSeen())
 	      }
       	}
 	}
@@ -167,10 +168,54 @@ func fundNetwork() {
 	post(url, payload)
 }
 
+func startTxListening() {
+	addr := "127.0.0.1:9650"
+	client, err := ethclient.Dial(fmt.Sprintf("ws://%s/ext/bc/C/ws", addr))
+	for err != nil {
+		time.Sleep(1 * time.Second)
+		fmt.Printf("Retrying %s\n", addr)
+		client, err = ethclient.Dial(fmt.Sprintf("ws://%s/ext/bc/C/ws", addr))
+	}
+
+	header_chan := make(chan *types.Header)
+
+	sub, err := client.SubscribeNewHead(context.Background(), header_chan)
+	if err != nil {
+		fmt.Println("sub failed", err)
+	}
+
+    fmt.Printf("Listening on %s\n", addr) 
+	for {
+	  select {
+  	    case err := <-sub.Err():
+    	      fmt.Println(err)
+  	    case bHeader := <-header_chan:
+			bHash := bHeader.Hash()
+			block, err := client.BlockByHash(context.Background(), bHash)
+			if err != nil {
+				fmt.Println("Block lookup failed for ", bHash, "\nError: ", err)
+				//time.Sleep(2 * time.Second)
+				//block, err = client.BlockByHash(context.Background(), bHash)
+				break
+			}
+			fmt.Println("Block", bHash, block.Time())
+			txs := block.Transactions()
+			for i:= 0; i< len(txs); i++ {
+				tx := txs[i]
+				if err != nil {
+					fmt.Println("Tx lookup failed for ", tx, "\nError: ", err)
+				} else {
+					fmt.Println(tx.Hash, " => ", tx.FirstSeen())
+				}
+			}
+      	}
+	}
+}
+
 func startTxSpamming(){
 	// probably want to make these parameritizable at some point
 	rpcEndpoints := make([]string, 5)
-	rpcEndpoints = append(rpcEndpoints, "http://127.0.0.1:9650","http://127.0.0.1:9652","http://127.0.0.1:9654","http://127.0.0.1:9658","http://127.0.0.1:9656")
+	rpcEndpoints = append(rpcEndpoints, "http://127.0.0.1:9650/ext/bc/C","http://127.0.0.1:9652/ext/bc/C","http://127.0.0.1:9654/ext/bc/C","http://127.0.0.1:9658/ext/bc/C","http://127.0.0.1:9656/ext/bc/C")
 	concurrency := 8
 	baseFee := uint64(225)
 	priorityFee := uint64(1)
@@ -250,6 +295,8 @@ func main() {
         go pollNode(addr)
     }
 
-	startTxSpamming()
+	go startTxListening()
+
+	//startTxSpamming()
 	for {}
 }
