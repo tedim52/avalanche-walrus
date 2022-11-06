@@ -27,6 +27,13 @@ var (
 	txSpammingTimeout = 5 * time.Minute
 )
 
+type Config struct {
+	Endpoints   []string 
+	Concurrency int      
+	BaseFee     uint64   
+	PriorityFee uint64   
+}
+
 func post(url string, payload string) string {
 	request, error := http.NewRequest("POST", url, bytes.NewBuffer([]byte(payload)))
 	if error != nil {
@@ -214,8 +221,7 @@ func startTxListening() {
 
 func startTxSpamming(){
 	// probably want to make these parameritizable at some point
-	rpcEndpoints := make([]string, 5)
-	rpcEndpoints = append(rpcEndpoints, "http://127.0.0.1:9650/ext/bc/C","http://127.0.0.1:9652/ext/bc/C","http://127.0.0.1:9654/ext/bc/C","http://127.0.0.1:9658/ext/bc/C","http://127.0.0.1:9656/ext/bc/C")
+	rpcEndpoints := []string{"http://127.0.0.1:9650/ext/bc/C/rpc","http://127.0.0.1:9652/ext/bc/C/rpc","http://127.0.0.1:9654/ext/bc/C/rpc","http://127.0.0.1:9658/ext/bc/C/rpc","http://127.0.0.1:9656/ext/bc/C/rpc"}
 	concurrency := 8
 	baseFee := uint64(225)
 	priorityFee := uint64(1)
@@ -297,6 +303,6 @@ func main() {
 
 	go startTxListening()
 
-	//startTxSpamming()
+	startTxSpamming()
 	for {}
 }

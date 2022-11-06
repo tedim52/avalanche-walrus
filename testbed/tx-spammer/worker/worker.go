@@ -33,6 +33,13 @@ var (
 	minFunderBalance *big.Int
 )
 
+type Config struct {
+	Endpoints   []string 
+	Concurrency int      
+	BaseFee     uint64   
+	PriorityFee uint64   
+}
+
 func setupVars(cID *big.Int, bFee uint64, pFee uint64) {
 	chainID = cID
 	signer = types.LatestSignerForChainID(chainID)
@@ -278,6 +285,8 @@ func (w *worker) confirmTransaction(ctx context.Context, tx common.Hash) (*big.I
 func Run(ctx context.Context, cfg *Config, keysDir string) error {
 	rclient, err := ethclient.Dial(cfg.Endpoints[0])
 	if err != nil {
+		fmt.Println(cfg.Endpoints[0])
+		fmt.Println("couldn't connect to client")
 		return err
 	}
 	chainId, err := rclient.ChainID(ctx)
