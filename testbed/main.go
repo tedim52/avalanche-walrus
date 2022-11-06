@@ -23,17 +23,6 @@ import (
 	"github.com/tedim52/avalanche-walrus/testbed/tx-spammer/worker"
 )
 
-var (
-	txSpammingTimeout = 5 * time.Minute
-)
-
-type Config struct {
-	Endpoints   []string 
-	Concurrency int      
-	BaseFee     uint64   
-	PriorityFee uint64   
-}
-
 func post(url string, payload string) string {
 	request, error := http.NewRequest("POST", url, bytes.NewBuffer([]byte(payload)))
 	if error != nil {
@@ -223,6 +212,7 @@ func startTxSpamming(){
 	// probably want to make these parameritizable at some point
 	rpcEndpoints := []string{"http://127.0.0.1:9650/ext/bc/C/rpc","http://127.0.0.1:9652/ext/bc/C/rpc","http://127.0.0.1:9654/ext/bc/C/rpc","http://127.0.0.1:9658/ext/bc/C/rpc","http://127.0.0.1:9656/ext/bc/C/rpc"}
 	concurrency := 8
+	txSpammingTimeout := 5 * time.Minute
 	baseFee := uint64(225)
 	priorityFee := uint64(1)
 	keysDir := ".simulator/keys"
