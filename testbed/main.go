@@ -170,7 +170,7 @@ func startTxSpamming(){
 	txSpammingTimeout := 5 * time.Minute
 	baseFee := uint64(225)
 	priorityFee := uint64(1)
-	keysDir := ".simulator/keys"
+	keysDir := "tx-spammer/.simulator/keys"
 
 	cfg := &worker.Config{
 		Endpoints:   rpcEndpoints,
