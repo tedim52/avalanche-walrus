@@ -164,7 +164,7 @@ func fundNetwork() {
 	post(url, payload)
 }
 
-func startTxListening() {
+func startTxListening(txChan chan worker.TxData) {
 	addr := "127.0.0.1:9650"
 	client, err := ethclient.Dial(fmt.Sprintf("ws://%s/ext/bc/C/ws", addr))
 	for err != nil {
@@ -179,6 +179,8 @@ func startTxListening() {
 	if err != nil {
 		fmt.Println("sub failed", err)
 	}
+	// TODO is time the correct timestamp?
+	// no -- use local timestamp
 
     fmt.Printf("Listening on %s\n", addr) 
 	for {
@@ -204,11 +206,13 @@ func startTxListening() {
 					fmt.Println(tx.Hash, " => ", tx.FirstSeen())
 				}
 			}
+		case txData := <-txChan:
+			fmt.Println("Tx", txData.Hash, txData.Time)
       	}
 	}
 }
 
-func startTxSpamming(){
+func startTxSpamming(txChan chan worker.TxData){
 	// probably want to make these parameritizable at some point
 	rpcEndpoints := []string{"http://127.0.0.1:9650/ext/bc/C/rpc","http://127.0.0.1:9652/ext/bc/C/rpc","http://127.0.0.1:9654/ext/bc/C/rpc","http://127.0.0.1:9658/ext/bc/C/rpc","http://127.0.0.1:9656/ext/bc/C/rpc"}
 	concurrency := 8
@@ -227,7 +231,7 @@ func startTxSpamming(){
 	ctx, cancel := context.WithTimeout(context.Background(), txSpammingTimeout)
 	errc := make(chan error)
 	go func() {
-		errc <- worker.Run(ctx, cfg, keysDir)
+		errc <- worker.Run(ctx, cfg, keysDir, txChan)
 	}()
 
 	sigs := make(chan os.Signal, 1)
@@ -291,8 +295,11 @@ func main() {
         go pollNode(addr)
     }
 
-	go startTxListening()
+	txChan := make(chan worker.TxData)
+	// TODO averages
+	// TODO set up start/stop signal channel
+	go startTxListening(txChan)
 
-	startTxSpamming()
+	startTxSpamming(txChan)
 	for {}
 }
