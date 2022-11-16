@@ -6,6 +6,7 @@ import (
 	"log"
 	"math/big"
 	"math/rand"
+	"strings"
 	"time"
 
 	"github.com/tedim52/avalanche-walrus/testbed/tx-spammer/key"
@@ -43,7 +44,7 @@ type Config struct {
 type TxData struct {
 	Hash common.Hash
 	Time int64
-	// nodeid
+	NodeURI string
 }
 
 func setupVars(cID *big.Int, bFee uint64, pFee uint64) {
@@ -121,6 +122,7 @@ type worker struct {
 	nonce   uint64
 
 	txChan chan TxData
+	nodeURI string
 }
 
 func newWorker(k *key.Key, endpoint string, keysDir string, txChan chan TxData) (*worker, error) {
@@ -140,12 +142,17 @@ func newWorker(k *key.Key, endpoint string, keysDir string, txChan chan TxData) 
 		}
 	}
 
+	uri := endpoint[len("http://"):]
+	routeIdx := strings.Index(uri, "/")
+	uri = uri[:routeIdx]
+
 	return &worker{
 		c:       client,
 		k:       k,
 		balance: big.NewInt(0),
 		nonce:   0,
 		txChan: txChan,
+		nodeURI: uri,
 	}, nil
 }
 
@@ -199,9 +206,9 @@ func (w *worker) waitForBalance(ctx context.Context, stdout bool, minBalance *bi
 
 func (w *worker) sendTx(ctx context.Context, recipient common.Address, value *big.Int) error {
 	for ctx.Err() == nil {
-				fmt.Println(transferGasLimit)
-		fmt.Println(feeCap)
-		fmt.Println(priorityFee)
+		//fmt.Println(transferGasLimit)
+		//fmt.Println(feeCap)
+		//fmt.Println(priorityFee)
 		tx := types.NewTx(&types.DynamicFeeTx{
 			ChainID:   chainID,
 			Nonce:     w.nonce,
@@ -224,6 +231,7 @@ func (w *worker) sendTx(ctx context.Context, recipient common.Address, value *bi
 			continue
 		}
 		txHash := signedTx.Hash()
+		w.txChan <- TxData{Hash: txHash, Time: time.Now().Unix(), NodeURI: w.nodeURI}
 		cost, err := w.confirmTransaction(ctx, txHash)
 		if err != nil {
 			log.Printf("failed to confirm %s: %s", txHash.Hex(), err.Error())
@@ -233,8 +241,6 @@ func (w *worker) sendTx(ctx context.Context, recipient common.Address, value *bi
 		w.nonce++
 		w.balance = new(big.Int).Sub(w.balance, cost)
 		w.balance = new(big.Int).Sub(w.balance, transferAmount)
-
-		w.txChan <- TxData{Hash: txHash, Time: time.Now().Unix()}
 		return nil
 	}
 	return ctx.Err()
