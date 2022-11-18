@@ -6,6 +6,7 @@ import (
 	"log"
 	"math/big"
 	"math/rand"
+	"strings"
 	"time"
 
 	"github.com/tedim52/avalanche-walrus/testbed/tx-spammer/key"
@@ -40,6 +41,12 @@ type Config struct {
 	PriorityFee uint64   
 }
 
+type TxData struct {
+	Hash common.Hash
+	Time int64
+	NodeURI string
+}
+
 func setupVars(cID *big.Int, bFee uint64, pFee uint64) {
 	chainID = cID
 	signer = types.LatestSignerForChainID(chainID)
@@ -53,7 +60,7 @@ func setupVars(cID *big.Int, bFee uint64, pFee uint64) {
 	minFunderBalance = new(big.Int).Add(maxTransferCost, requestAmount)
 }
 
-func createWorkers(ctx context.Context, keysDir string, endpoints []string, desiredWorkers int) (*worker, []*worker, error) {
+func createWorkers(ctx context.Context, keysDir string, endpoints []string, desiredWorkers int, txChan chan TxData) (*worker, []*worker, error) {
 	keys, err := key.LoadAll(ctx, keysDir)
 	if err != nil {
 		return nil, nil, fmt.Errorf("unable to load keys: %w", err)
@@ -62,7 +69,7 @@ func createWorkers(ctx context.Context, keysDir string, endpoints []string, desi
 	var master *worker
 	var workers []*worker
 	for i, k := range keys {
-		worker, err := newWorker(k, endpoints[i%len(endpoints)], keysDir)
+		worker, err := newWorker(k, endpoints[i%len(endpoints)], keysDir, txChan)
 		if err != nil {
 			return nil, nil, err
 		}
@@ -88,7 +95,7 @@ func createWorkers(ctx context.Context, keysDir string, endpoints []string, desi
 	}
 
 	if master == nil {
-		master, err = newWorker(nil, endpoints[rand.Intn(len(endpoints))], keysDir)
+		master, err = newWorker(nil, endpoints[rand.Intn(len(endpoints))], keysDir, txChan)
 		if err != nil {
 			return nil, nil, fmt.Errorf("unable to create master: %w", err)
 		}
@@ -96,7 +103,7 @@ func createWorkers(ctx context.Context, keysDir string, endpoints []string, desi
 
 	for len(workers) < desiredWorkers {
 		i := len(workers)
-		worker, err := newWorker(nil, endpoints[i%len(endpoints)], keysDir)
+		worker, err := newWorker(nil, endpoints[i%len(endpoints)], keysDir, txChan)
 		if err != nil {
 			return nil, nil, fmt.Errorf("unable to create worker: %w", err)
 		}
@@ -113,9 +120,12 @@ type worker struct {
 
 	balance *big.Int
 	nonce   uint64
+
+	txChan chan TxData
+	nodeURI string
 }
 
-func newWorker(k *key.Key, endpoint string, keysDir string) (*worker, error) {
+func newWorker(k *key.Key, endpoint string, keysDir string, txChan chan TxData) (*worker, error) {
 	client, err := ethclient.Dial(endpoint)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create ethclient: %w", err)
@@ -132,11 +142,17 @@ func newWorker(k *key.Key, endpoint string, keysDir string) (*worker, error) {
 		}
 	}
 
+	uri := endpoint[len("http://"):]
+	routeIdx := strings.Index(uri, "/")
+	uri = uri[:routeIdx]
+
 	return &worker{
 		c:       client,
 		k:       k,
 		balance: big.NewInt(0),
 		nonce:   0,
+		txChan: txChan,
+		nodeURI: uri,
 	}, nil
 }
 
@@ -190,9 +206,9 @@ func (w *worker) waitForBalance(ctx context.Context, stdout bool, minBalance *bi
 
 func (w *worker) sendTx(ctx context.Context, recipient common.Address, value *big.Int) error {
 	for ctx.Err() == nil {
-				fmt.Println(transferGasLimit)
-		fmt.Println(feeCap)
-		fmt.Println(priorityFee)
+		//fmt.Println(transferGasLimit)
+		//fmt.Println(feeCap)
+		//fmt.Println(priorityFee)
 		tx := types.NewTx(&types.DynamicFeeTx{
 			ChainID:   chainID,
 			Nonce:     w.nonce,
@@ -215,6 +231,7 @@ func (w *worker) sendTx(ctx context.Context, recipient common.Address, value *bi
 			continue
 		}
 		txHash := signedTx.Hash()
+		w.txChan <- TxData{Hash: txHash, Time: time.Now().Unix(), NodeURI: w.nodeURI}
 		cost, err := w.confirmTransaction(ctx, txHash)
 		if err != nil {
 			log.Printf("failed to confirm %s: %s", txHash.Hex(), err.Error())
@@ -282,7 +299,7 @@ func (w *worker) confirmTransaction(ctx context.Context, tx common.Hash) (*big.I
 
 // Run attempts to apply load to a network specified in .simulator/config.yml
 // and periodically prints metrics about the traffic it generates.
-func Run(ctx context.Context, cfg *Config, keysDir string) error {
+func Run(ctx context.Context, cfg *Config, keysDir string, txChan chan TxData) error {
 	rclient, err := ethclient.Dial(cfg.Endpoints[0])
 	if err != nil {
 		fmt.Println(cfg.Endpoints[0])
@@ -295,7 +312,7 @@ func Run(ctx context.Context, cfg *Config, keysDir string) error {
 	}
 	setupVars(chainId, cfg.BaseFee, cfg.PriorityFee)
 
-	master, workers, err := createWorkers(ctx, keysDir, cfg.Endpoints, cfg.Concurrency)
+	master, workers, err := createWorkers(ctx, keysDir, cfg.Endpoints, cfg.Concurrency, txChan)
 	if err != nil {
 		return fmt.Errorf("unable to load available workers: %w", err)
 	}

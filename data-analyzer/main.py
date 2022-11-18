@@ -9,7 +9,7 @@ def main():
     if len(sys.argv) != 2:
         print("Usage: python3 main.py path-to-csv")
         exit(1)
-
+    
     # Assumes csv well formatted
     # TODO may want to do some checks
     df = pd.read_csv(sys.argv[1])

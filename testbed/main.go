@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"bytes"
 	"context"
+	"encoding/csv"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
@@ -18,6 +19,7 @@ import (
 	"syscall"
 
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/ava-labs/coreth/core/types"
 	"github.com/ava-labs/coreth/ethclient"
 	"github.com/tedim52/avalanche-walrus/testbed/tx-spammer/worker"
 )
@@ -83,9 +85,10 @@ func pollNode(addr string) {
     	      //fmt.Println(vLog) // pointer to event log
 	      tx, _, err := client.TransactionByHash(context.Background(), *vLog) 
 	      if err != nil {
-		fmt.Println("tx lookup failed", err)
+			//fmt.Println("tx lookup failed", err)
 	      } else {
-		fmt.Println(vLog, " => ", tx.FirstSeen())
+			tx.FirstSeen() // avoiding compile error
+			//fmt.Println(*vLog, tx.Hash, " => ", tx.FirstSeen())
 	      }
       	}
 	}
@@ -100,7 +103,7 @@ func checkHealth() bool {
 	return health
 }
 
-func getAddrs(n int) []string {
+func getAddrsAndIDs(n int) ([]string, map[string]string) {
 	res := post("http://localhost:8081/v1/control/status", "")
 	var result map[string]any
 	json.Unmarshal([]byte(res), &result)
@@ -110,14 +113,18 @@ func getAddrs(n int) []string {
 		panic("No nodeInfos")
 	}
 	addrs := make([]string, n)
+	idMap := make(map[string]string)
 	i := 0
 	prefix := len("http://")
 	for _, value := range nodeInfo {
 		uri := value.(map[string]any)["uri"].(string)
-		addrs[i] = uri[prefix:]
+		uri = uri[prefix:]
+		nodeid := value.(map[string]any)["id"].(string)
+		addrs[i] = uri
+		idMap[uri] = nodeid
 		i++
 	}
-	return addrs
+	return addrs, idMap
 }
 
 func fundNetwork() {
@@ -163,7 +170,87 @@ func fundNetwork() {
 	post(url, payload)
 }
 
-func startTxSpamming(){
+func startTxListening(idMap map[string]string, txChan chan worker.TxData, toggleChan chan bool) {
+	addr := "127.0.0.1:9650"
+	client, err := ethclient.Dial(fmt.Sprintf("ws://%s/ext/bc/C/ws", addr))
+	for err != nil {
+		time.Sleep(1 * time.Second)
+		fmt.Printf("Retrying %s\n", addr)
+		client, err = ethclient.Dial(fmt.Sprintf("ws://%s/ext/bc/C/ws", addr))
+	}
+
+	header_chan := make(chan *types.Header)
+
+	sub, err := client.SubscribeNewHead(context.Background(), header_chan)
+	if err != nil {
+		fmt.Println("sub failed", err)
+	}
+	// TODO is time the correct timestamp?
+	// no -- use local timestamp
+
+    fmt.Printf("Listening on %s\n", addr) 
+
+	txMap := make(map[common.Hash]worker.TxData)
+	f, e := os.Create("./output.csv")
+    if e != nil {
+        fmt.Println(e)
+    }
+	writer := csv.NewWriter(f)
+	e = writer.WriteAll([][]string{
+		{"Hash", "Start", "End", "NodeID"}, // node id TODO
+	})
+	if e != nil {
+		fmt.Println(e)
+	}
+
+	monitoringOn := false
+
+	for {
+	  select {
+	  	case monitorState := <-toggleChan:
+			monitoringOn = monitorState
+  	    case err := <-sub.Err():
+    	      fmt.Println(err)
+  	    case bHeader := <-header_chan:
+			ts := time.Now().Unix()
+			bHash := bHeader.Hash()
+			block, err := client.BlockByHash(context.Background(), bHash)
+			if err != nil {
+				fmt.Println("Block lookup failed for ", bHash, "\nError: ", err)
+				//time.Sleep(2 * time.Second)
+				//block, err = client.BlockByHash(context.Background(), bHash)
+				break
+			}
+			fmt.Println("Block", bHash, block.Time())
+			txs := block.Transactions()
+			var data [][]string
+			for i:= 0; i< len(txs); i++ {
+				tx := txs[i]
+				if err != nil {
+					fmt.Println("Tx lookup failed for ", tx, "\nError: ", err)
+				} else {
+					txData, tracked := txMap[tx.Hash()]
+					if tracked {
+						data = append(data, []string{fmt.Sprintf("%x", tx.Hash()), fmt.Sprintf("%d", txData.Time), fmt.Sprintf("%d", ts), idMap[txData.NodeURI]})
+						delete(txMap, tx.Hash())
+					} else {
+						fmt.Println("Not found", tx.Hash())
+					}
+				}
+			}
+			e = writer.WriteAll(data)
+			if e != nil {
+				fmt.Println(e)
+			}
+		case txData := <-txChan:
+			if monitoringOn {
+				txMap[txData.Hash] = txData
+			}
+      	}
+	}
+}
+
+func startTxSpamming(txChan chan worker.TxData, startMonitoring func()){
 	// probably want to make these parameritizable at some point
 	rpcEndpoints := []string{"http://127.0.0.1:9650/ext/bc/C/rpc","http://127.0.0.1:9652/ext/bc/C/rpc","http://127.0.0.1:9654/ext/bc/C/rpc","http://127.0.0.1:9658/ext/bc/C/rpc","http://127.0.0.1:9656/ext/bc/C/rpc"}
 	concurrency := 8
@@ -182,7 +269,7 @@ func startTxSpamming(){
 	ctx, cancel := context.WithTimeout(context.Background(), txSpammingTimeout)
 	errc := make(chan error)
 	go func() {
-		errc <- worker.Run(ctx, cfg, keysDir)
+		errc <- worker.Run(ctx, cfg, keysDir, txChan)
 	}()
 
 	sigs := make(chan os.Signal, 1)
@@ -236,7 +323,7 @@ func main() {
 	fmt.Println("")
 
 	// Get Addrs
-	addrs := getAddrs(total_nodes)
+	addrs, idMap := getAddrsAndIDs(total_nodes)
 	
 	fmt.Println("Funding Network")
 	fundNetwork()
@@ -246,6 +333,15 @@ func main() {
         go pollNode(addr)
     }
 
-	startTxSpamming()
+	txChan := make(chan worker.TxData)
+	toggleChan := make(chan bool, 1)
+	startMonitoring := func() {
+		toggleChan <- true
+    }
+	go startMonitoring()
+	// TODO averages\
+	go startTxListening(idMap, txChan, toggleChan)
+
+	startTxSpamming(txChan, startMonitoring)
 	for {}
 }
