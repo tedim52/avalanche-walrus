@@ -26,6 +26,8 @@ func CheckSaturation(ctx context.Context, client ethclient.Client, startMonitori
 	startTime := uint64(time.Now().Unix())
 	currentTime := startTime
 	numBlocks := uint64(0)
+	currSecondsPerBlock := uint64(0)
+	gasUsed := uint64(0)
 
 	for ctx.Err() == nil {
 		newBlockNumber, err := client.BlockNumber(ctx)
@@ -50,17 +52,22 @@ func CheckSaturation(ctx context.Context, client ethclient.Client, startMonitori
 					continue
 				}
 				numBlocks += 1
-				currSecondsPerBlock := (currentTime - startTime) / numBlocks 
-				gasUsed := block.GasUsed()
+				currSecondsPerBlock = (currentTime - startTime) / numBlocks 
+				gasUsed = block.GasUsed()
 				if gasUsed > targetGasUsage && currSecondsPerBlock > targetSecondsPerBlock {
 					startMonitoring()
+					return ctx.Err()
 				}
-
-				return ctx.Err()
 			}
 		}
 		lastBlockNumber = newBlockNumber
 		currentTime = block.Time()
+
+		// log 10s
+		diffMod := (currentTime - startTime) % 10
+		if diffMod == 0 {
+			log.Printf("[saturation stats]: seconds per block: %v, gas usage: %d\n", currSecondsPerBlock, gasUsed)
+		}
 	}
 	return ctx.Err()
 }
