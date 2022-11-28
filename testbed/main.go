@@ -269,7 +269,7 @@ func startTxSpamming(txChan chan worker.TxData, startMonitoring func()){
 	ctx, cancel := context.WithTimeout(context.Background(), txSpammingTimeout)
 	errc := make(chan error)
 	go func() {
-		errc <- worker.Run(ctx, cfg, keysDir, txChan)
+		errc <- worker.Run(ctx, cfg, keysDir, txChan, startMonitoring)
 	}()
 
 	sigs := make(chan os.Signal, 1)
@@ -338,10 +338,8 @@ func main() {
 	startMonitoring := func() {
 		toggleChan <- true
     }
-	go startMonitoring()
-	// TODO averages\
-	go startTxListening(idMap, txChan, toggleChan)
 
+	go startTxListening(idMap, txChan, toggleChan)
 	startTxSpamming(txChan, startMonitoring)
 	for {}
 }

@@ -299,7 +299,7 @@ func (w *worker) confirmTransaction(ctx context.Context, tx common.Hash) (*big.I
 
 // Run attempts to apply load to a network specified in .simulator/config.yml
 // and periodically prints metrics about the traffic it generates.
-func Run(ctx context.Context, cfg *Config, keysDir string, txChan chan TxData) error {
+func Run(ctx context.Context, cfg *Config, keysDir string, txChan chan TxData, startMonitoring func()) error {
 	rclient, err := ethclient.Dial(cfg.Endpoints[0])
 	if err != nil {
 		fmt.Println(cfg.Endpoints[0])
@@ -320,6 +320,9 @@ func Run(ctx context.Context, cfg *Config, keysDir string, txChan chan TxData) e
 	g, gctx := errgroup.WithContext(ctx)
 	g.Go(func() error {
 		return metrics.Monitor(gctx, rclient)
+	})
+	g.Go(func()error {
+		return metrics.CheckSaturation(gctx, rclient, startMonitoring)
 	})
 	fundRequest := make(chan common.Address)
 	g.Go(func() error {
