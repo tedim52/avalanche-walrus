@@ -54,7 +54,7 @@ func CheckSaturation(ctx context.Context, client ethclient.Client, startMonitori
 				numBlocks += 1
 				currSecondsPerBlock = (currentTime - startTime) / numBlocks 
 				gasUsed = block.GasUsed()
-				if gasUsed > targetGasUsage && currSecondsPerBlock > targetSecondsPerBlock {
+				if gasUsed >= targetGasUsage && currSecondsPerBlock >= targetSecondsPerBlock {
 					startMonitoring()
 					return ctx.Err()
 				}
