@@ -6,6 +6,8 @@ import (
 	"log"
 	"math/big"
 	"time"
+	"os"
+	"encoding/csv"
 
 	"github.com/ava-labs/coreth/core/types"
 	"github.com/ava-labs/coreth/ethclient"

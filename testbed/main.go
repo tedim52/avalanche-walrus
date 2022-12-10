@@ -197,7 +197,7 @@ func startTxListening(idMap map[string]string, txChan chan worker.TxData, toggle
     }
 	writer := csv.NewWriter(f)
 	e = writer.WriteAll([][]string{
-		{"Hash", "Start", "End", "NodeID"}, // node id TODO
+		{"TxHash", "Start", "End", "NodeID", "BlockHash"}, 
 	})
 	if e != nil {
 		fmt.Println(e)
@@ -231,7 +231,7 @@ func startTxListening(idMap map[string]string, txChan chan worker.TxData, toggle
 				} else {
 					txData, tracked := txMap[tx.Hash()]
 					if tracked {
-						data = append(data, []string{fmt.Sprintf("%x", tx.Hash()), fmt.Sprintf("%d", txData.Time), fmt.Sprintf("%d", ts), idMap[txData.NodeURI]})
+						data = append(data, []string{fmt.Sprintf("%x", tx.Hash()), fmt.Sprintf("%d", txData.Time), fmt.Sprintf("%d", ts), idMap[txData.NodeURI], fmt.Sprintf("%x", block.Hash())})
 						delete(txMap, tx.Hash())
 					} else {
 						fmt.Println("Not found", tx.Hash())
