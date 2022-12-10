@@ -19,6 +19,18 @@ const (
 // Monitor periodically prints metrics related to transaction activity on
 // a given network.
 func Monitor(ctx context.Context, client ethclient.Client) error {
+	f, e := os.Create("./block-data.csv")
+    if e != nil {
+        fmt.Println(e)
+    }
+	writer := csv.NewWriter(f)
+	e = writer.WriteAll([][]string{
+		{"BlockHash", "TPS", "GasUsed"},
+	})
+	if e != nil {
+		fmt.Println(e)
+	}
+
 	lastBlockNumber, err := client.BlockNumber(ctx)
 	if err != nil {
 		return fmt.Errorf("failed to get block number: %w", err)
@@ -29,6 +41,7 @@ func Monitor(ctx context.Context, client ethclient.Client) error {
 	timeTxs := make(map[uint64]int)
 	totalGas := uint64(0)
 	timeGas := make(map[uint64]uint64)
+	tps := float64(0)
 	for ctx.Err() == nil {
 		newBlockNumber, err := client.BlockNumber(ctx)
 		if err != nil {
@@ -54,9 +67,11 @@ func Monitor(ctx context.Context, client ethclient.Client) error {
 				txs := len(block.Transactions())
 				gas := block.GasUsed()
 				t := block.Time()
-
 				log.Printf("[block created] t: %v index: %d base fee: %d block gas cost: %d block txs: %d gas used: %d\n", time.Unix(int64(t), 0), i, block.BaseFee().Div(block.BaseFee(), big.NewInt(params.GWei)), block.BlockGasCost(), txs, gas)
-
+				e = writer.Write([]string{fmt.Sprintf("%x", block.Hash()), fmt.Sprintf("%d", gas), fmt.Sprintf("%.2f", tps)})
+				if e != nil {
+					fmt.Println(e)
+				}
 				// Update Tx Count
 				timeTxs[t] += txs
 				totalTxs += txs
@@ -78,6 +93,7 @@ func Monitor(ctx context.Context, client ethclient.Client) error {
 			tenSgas += timeGas[i]
 		}
 		diff := currentTime - startTime
+		tps = float64(tenStxs)/float64(10)
 		if diff > 0 {
 			log.Printf(
 				"[stats] historical TPS: %.2f last 10s TPS: %.2f total txs: %d historical GPS: %.1f, last 10s GPS: %.1f elapsed: %v\n",
