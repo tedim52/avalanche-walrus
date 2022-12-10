@@ -43,7 +43,7 @@ def avg_latencies(bhashes, df_txs):
             bhash_to_interval[h] = i
     # iterate through txs and sum
     for idx in df_txs.index:
-        interval_idx = bhash_to_interval[df_txs['Blockhash'][idx]]
+        interval_idx = bhash_to_interval[df_txs['BlockHash'][idx]]
         latency = df_idx['End'][idx] - df_idx['Start'][idx]
         avg_latency[interval_idx] += latency
         tx_count[interval_idx] += 1
