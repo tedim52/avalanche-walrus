@@ -30,7 +30,7 @@ def bhashes_from_interval(key, interval, df):
             l.append(bucket)
             upper += interval
             bucket = []
-        bucket.append(df[key])
+        bucket.append(df['BlockHash'][idx])
     return l
 
 def avg_latencies(bhashes, df_txs):
@@ -38,15 +38,17 @@ def avg_latencies(bhashes, df_txs):
     tx_count = [0] * len(bhashes)
     # flatten into lookup table
     bhash_to_interval = {}
-    for i, b in bhashes:
+    for i, b in enumerate(bhashes):
         for h in b:
             bhash_to_interval[h] = i
     # iterate through txs and sum
     for idx in df_txs.index:
-        interval_idx = bhash_to_interval[df_txs['BlockHash'][idx]]
-        latency = df_idx['End'][idx] - df_idx['Start'][idx]
-        avg_latency[interval_idx] += latency
-        tx_count[interval_idx] += 1
+        bhash = df_txs['BlockHash'][idx]
+        if bhash in bhash_to_interval:
+            interval_idx = bhash_to_interval[bhash]
+            latency = df_txs['End'][idx] - df_txs['Start'][idx]
+            avg_latency[interval_idx] += latency
+            tx_count[interval_idx] += 1
     # Take average
     for i in range(len(avg_latency)):
         if tx_count[i] > 0:
@@ -70,12 +72,13 @@ def main():
     gu_interval_size = 100000
     tps_interval_size = 10
     # Create list of blockhashes for each range
-    ctrl_gu_bhashes = bhashes_from_interval('GasUsed', gu_interval_size, ctrl_meta)
-    ctrl_tps_bhashes = bhashes_from_interval('TPS', tps_interval_size, ctrl_meta)
-    prop_gu_bhashes = bhashes_from_interval('GasUsed', gu_interval_size, prop_meta)
-    prop_tps_bhashes = bhashes_from_interval('TPS', tps_interval_size, prop_meta)
-    scor_gu_bhashes = bhashes_from_interval('GasUsed', gu_interval_size, scor_meta)
-    scor_tps_bhashes = bhashes_from_interval('TPS', tps_interval_size, scor_meta)
+    # Note: keys switched due to bug in testbed
+    ctrl_gu_bhashes = bhashes_from_interval('TPS', gu_interval_size, ctrl_meta)
+    ctrl_tps_bhashes = bhashes_from_interval('GasUsed', tps_interval_size, ctrl_meta)
+    prop_gu_bhashes = bhashes_from_interval('TPS', gu_interval_size, prop_meta)
+    prop_tps_bhashes = bhashes_from_interval('GasUsed', tps_interval_size, prop_meta)
+    scor_gu_bhashes = bhashes_from_interval('TPS', gu_interval_size, scor_meta)
+    scor_tps_bhashes = bhashes_from_interval('GasUsed', tps_interval_size, scor_meta)
 
     # Average latency for all txhashes corresponding to blocks
     ctrl_gu_y = avg_latencies(ctrl_gu_bhashes, ctrl_txs)
@@ -87,11 +90,11 @@ def main():
 
     # Create x-axes
     ctrl_gu_x = list(range(gu_interval_size, gu_interval_size*(len(ctrl_gu_bhashes)+1), gu_interval_size))
-    ctrl_tps_x = list(range(gu_interval_size, gu_interval_size*(len(ctrl_tps_bhashes)+1), gu_interval_size))
+    ctrl_tps_x = list(range(tps_interval_size, tps_interval_size*(len(ctrl_tps_bhashes)+1), tps_interval_size))
     prop_gu_x = list(range(gu_interval_size, gu_interval_size*(len(prop_gu_bhashes)+1), gu_interval_size))
-    prop_tps_x = list(range(gu_interval_size, gu_interval_size*(len(prop_tps_bhashes)+1), gu_interval_size))
+    prop_tps_x = list(range(tps_interval_size, tps_interval_size*(len(prop_tps_bhashes)+1), tps_interval_size))
     scor_gu_x = list(range(gu_interval_size, gu_interval_size*(len(scor_gu_bhashes)+1), gu_interval_size))
-    scor_tps_x = list(range(gu_interval_size, gu_interval_size*(len(scor_tps_bhashes)+1), gu_interval_size))
+    scor_tps_x = list(range(tps_interval_size, tps_interval_size*(len(scor_tps_bhashes)+1), tps_interval_size))
 
     plt.plot(ctrl_gu_x, ctrl_gu_y, label='Control')
     plt.plot(prop_gu_x, prop_gu_y, label='Proposer Gossip')
@@ -100,6 +103,7 @@ def main():
     plt.title("Tx Latency vs Gas Used for Different Implementations")
     plt.xlabel("Gas Used")
     plt.ylabel("Avg Tx RTT")
+    plt.legend()
     plt.show()
 
     plt.plot(ctrl_tps_x, ctrl_tps_y, label='Control')
@@ -109,6 +113,7 @@ def main():
     plt.title("Tx Latency vs TPS for Different Implementations")
     plt.xlabel("TPS")
     plt.ylabel("Avg Tx RTT")
+    plt.legend()
     plt.show()
 
 if __name__ == '__main__':
