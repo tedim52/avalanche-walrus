@@ -1,1 +1,1 @@
-5 /Users/tewodrosmitiku/Desktop/walrusgo/build/avalanchego
+5 /Users/tewodrosmitiku/Desktop/avalanche-binaries/vanilla-binary/avalanchego

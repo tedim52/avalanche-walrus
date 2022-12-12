@@ -16,7 +16,63 @@ import (
 
 const (
 	checkInterval = 2 * time.Second
+	targetSecondsPerBlock = 2 
+	targetGasUsage = 7_000_000
 )
+
+func CheckSaturation(ctx context.Context, client ethclient.Client, startMonitoring func()) error {
+	lastBlockNumber, err := client.BlockNumber(ctx)
+	if err != nil {
+		return fmt.Errorf("failed to get block number: %w", err)
+	}
+	startTime := uint64(time.Now().Unix())
+	currentTime := startTime
+	numBlocks := uint64(0)
+	currSecondsPerBlock := uint64(0)
+	gasUsed := uint64(0)
+
+	for ctx.Err() == nil {
+		newBlockNumber, err := client.BlockNumber(ctx)
+		if err != nil {
+			log.Printf("failed to get block number: %s", err)
+			time.Sleep(checkInterval)
+			continue
+		}
+
+		if newBlockNumber <= lastBlockNumber {
+			time.Sleep(checkInterval)
+			continue
+		}
+
+		var block *types.Block
+		for i := lastBlockNumber + 1; i <= newBlockNumber; i++ {
+			for ctx.Err() == nil {
+				block, err = client.BlockByNumber(ctx, new(big.Int).SetUint64(i))
+				if err != nil {
+					log.Printf("failed to get block at number %d: %s", i, err)
+					time.Sleep(checkInterval)
+					continue
+				}
+				numBlocks += 1
+				currSecondsPerBlock = (currentTime - startTime) / numBlocks 
+				gasUsed = block.GasUsed()
+				if gasUsed >= targetGasUsage && currSecondsPerBlock >= targetSecondsPerBlock {
+					startMonitoring()
+					return ctx.Err()
+				}
+			}
+		}
+		lastBlockNumber = newBlockNumber
+		currentTime = block.Time()
+
+		// log 10s
+		diffMod := (currentTime - startTime) % 10
+		if diffMod == 0 {
+			log.Printf("[saturation stats]: seconds per block: %v, gas usage: %d\n", currSecondsPerBlock, gasUsed)
+		}
+	}
+	return ctx.Err()
+}
 
 // Monitor periodically prints metrics related to transaction activity on
 // a given network.
